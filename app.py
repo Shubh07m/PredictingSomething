@@ -1,11 +1,11 @@
-import streamlit as st
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.linear_model import LinearRegression
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import classification_report
+import streamlit as st 
+import pandas as pd 
+import numpy as np 
+import matplotlib.pyplot as plt 
+from sklearn.ensemble import RandomForestClassifier 
+from sklearn.linear_model import LinearRegression 
+from sklearn.model_selection import train_test_split 
+from sklearn.metrics import classification_report 
 
 st.set_page_config(page_title="Stock Prediction App", layout="wide")
 st.title("📈 Stock Market Prediction App")
@@ -83,3 +83,23 @@ if uploaded_file:
     except Exception as e:
         st.error(f"❌ Error: {e}")
         
+        import pandas as pd
+import streamlit as st
+
+# Read the CSV file uploaded by the user
+uploaded_file = st.file_uploader("Upload your stock CSV", type="csv")
+
+if uploaded_file:
+    df = pd.read_csv(uploaded_file)
+    
+    # Convert the 'Date' column to datetime
+    df['Date'] = pd.to_datetime(df['Date'], errors='coerce')
+    
+    # Show the first few rows to confirm
+    st.subheader("Preview of Data")
+    st.write(df.head())
+    
+
+    # Further processing like predictions or forecasts can go here
+
+
