@@ -7,100 +7,127 @@ from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split 
 from sklearn.metrics import classification_report 
 
+# Configure page settings
 st.set_page_config(page_title="Stock Prediction App", layout="wide")
 st.title("📈 Stock Market Prediction App")
 
-# uploaded_file = st.file_uploader("Upload your stock CSV", type="csv")
+# Add a sidebar for additional information
+st.sidebar.header("About")
+st.sidebar.info("""
+This app predicts stock market movements using:
+- Random Forest for Buy/Sell signals
+- Linear Regression for price forecasting
+""")
+
+# File upload with error handling
 uploaded_file = st.file_uploader("Upload your stock CSV", type="csv", key="stock_data_uploader")
 
 if uploaded_file:
-    df = pd.read_csv(uploaded_file)
-    st.subheader("Preview of Data")
-    st.write(df.head())
-
     try:
+        # Read and preprocess data
+        df = pd.read_csv(uploaded_file)
+        
+        if not all(col in df.columns for col in ['Date', 'Open', 'High', 'Low', 'Close', 'Volume']):
+            st.error("❌ CSV file must contain columns: Date, Open, High, Low, Close, Volume")
+            st.stop()
+            
+        st.subheader("Preview of Data")
+        st.write(df.head())
+
+        # Data processing
         df['Date'] = pd.to_datetime(df['Date'])
         df.set_index('Date', inplace=True)
         df = df[['Open', 'High', 'Low', 'Close', 'Volume']]
-        df['MA7'] = df['Close'].rolling(window=7).mean()
-        df['MA21'] = df['Close'].rolling(window=21).mean()
+        
+        # Calculate technical indicators
+        df['MA7'] = df['Close'].rolling(window=7, min_periods=1).mean()
+        df['MA21'] = df['Close'].rolling(window=21, min_periods=1).mean()
         df['Future_Close'] = df['Close'].shift(-3)
         df['Signal'] = np.where(df['Future_Close'] > df['Close'], 1, 0)
+        
+        # Remove any remaining NaN values
         df.dropna(inplace=True)
 
+        if len(df) < 30:
+            st.error("❌ Not enough data points. Please upload a CSV with at least 30 days of data.")
+            st.stop()
+
+        # Random Forest Classification
         st.subheader("Buy/Sell Signal Prediction (Random Forest)")
         features = ['Open', 'High', 'Low', 'Close', 'Volume', 'MA7', 'MA21']
         X = df[features]
         y = df['Signal']
 
-        X_train, X_test, y_train, y_test = train_test_split(X, y, shuffle=False, test_size=0.2)
-        clf = RandomForestClassifier()
+        # Ensure we have enough data for training
+        X_train, X_test, y_train, y_test = train_test_split(X, y, shuffle=False, test_size=0.2, random_state=42)
+        
+        # Train Random Forest model
+        clf = RandomForestClassifier(n_estimators=100, random_state=42)
         clf.fit(X_train, y_train)
         y_pred = clf.predict(X_test)
 
+        # Display classification results
         st.text("Classification Report:")
         st.text(classification_report(y_test, y_pred))
 
+        # Show recent predictions
         df_test = df.iloc[-len(y_test):].copy()
         df_test['Prediction'] = y_pred
+        st.write("Recent Predictions:")
         st.write(df_test[['Close', 'Prediction']].tail())
 
+        # Plot Buy/Sell signals
         st.subheader("📈 Buy (1) / Sell (0) Signal Plot")
-        plt.figure(figsize=(10, 4))
-        plt.plot(df_test.index, df_test['Close'], label='Close Price')
-        plt.scatter(df_test.index, df_test['Prediction']*df_test['Close'], color='green', label='Buy Signal', marker='^')
+        fig, ax = plt.subplots(figsize=(12, 6))
+        ax.plot(df_test.index, df_test['Close'], label='Close Price')
+        ax.scatter(df_test[df_test['Prediction'] == 1].index, 
+                  df_test[df_test['Prediction'] == 1]['Close'], 
+                  color='green', label='Buy Signal', marker='^')
+        ax.set_xlabel('Date')
+        ax.set_ylabel('Price')
         plt.legend()
-        st.pyplot(plt)
+        st.pyplot(fig)
+        plt.close()
 
-        st.subheader("🔮 7-Day Close Price Forecast (Linear Regression)")
+        # Linear Regression Forecast
+        st.subheader("🔮 7-Day Close Price Forecast")
         df['Target_Close_7d'] = df['Close'].shift(-7)
         df.dropna(inplace=True)
 
         Xf = df[features]
         yf = df['Target_Close_7d']
 
+        # Prepare forecast data
         X_train_f, X_forecast = Xf[:-7], Xf[-7:]
         y_train_f = yf[:-7]
 
+        # Train Linear Regression model
         lr = LinearRegression()
         lr.fit(X_train_f, y_train_f)
         forecast = lr.predict(X_forecast)
 
+        # Create forecast dataframe
         forecast_df = pd.DataFrame({
             'Date': df.index[-7:],
             'Actual_Close': df['Close'].iloc[-7:],
             'Forecast_Close': forecast
         }).set_index('Date')
 
+        st.write("7-Day Forecast vs Actual:")
         st.write(forecast_df)
 
-        st.subheader("📊 Forecast vs Actual")
-        plt.figure(figsize=(10, 4))
-        plt.plot(forecast_df.index, forecast_df['Actual_Close'], label='Actual')
-        plt.plot(forecast_df.index, forecast_df['Forecast_Close'], label='Forecast')
+        # Plot forecast results
+        fig, ax = plt.subplots(figsize=(12, 6))
+        ax.plot(forecast_df.index, forecast_df['Actual_Close'], label='Actual')
+        ax.plot(forecast_df.index, forecast_df['Forecast_Close'], label='Forecast', linestyle='--')
+        ax.set_xlabel('Date')
+        ax.set_ylabel('Price')
         plt.legend()
-        st.pyplot(plt)
+        st.pyplot(fig)
+        plt.close()
 
     except Exception as e:
-        st.error(f"❌ Error: {e}")
-        
-        import pandas as pd
-import streamlit as st
-
-# Read the CSV file uploaded by the user
-uploaded_file = st.file_uploader("Upload your stock CSV", type="csv")
-
-if uploaded_file:
-    df = pd.read_csv(uploaded_file)
-    
-    # Convert the 'Date' column to datetime
-    df['Date'] = pd.to_datetime(df['Date'], errors='coerce')
-    
-    # Show the first few rows to confirm
-    st.subheader("Preview of Data")
-    st.write(df.head())
-    
-
-    # Further processing like predictions or forecasts can go here
+        st.error(f"❌ Error: {str(e)}")
+        st.error("Please make sure your CSV file is properly formatted and contains the required columns.")
 
 
