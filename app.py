@@ -42,9 +42,9 @@ def load_and_validate_data(file):
         
         # Rename common column variations
         column_mappings = {
-            'Shares Traded': 'Volume',
-            'Value': 'Volume',
-            'Trade': 'Volume'
+            'Shares Traded': 'Volume1',
+            'Value': 'Volume2',
+            'Trade': 'Volume3'
         }
         df = df.rename(columns=column_mappings)
         
