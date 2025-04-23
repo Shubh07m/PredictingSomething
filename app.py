@@ -10,7 +10,8 @@ from sklearn.metrics import classification_report
 st.set_page_config(page_title="Stock Prediction App", layout="wide")
 st.title("📈 Stock Market Prediction App")
 
-uploaded_file = st.file_uploader("Upload your stock CSV", type="csv")
+# uploaded_file = st.file_uploader("Upload your stock CSV", type="csv")
+uploaded_file = st.file_uploader("Upload your stock CSV", type="csv", key="stock_data_uploader")
 
 if uploaded_file:
     df = pd.read_csv(uploaded_file)
